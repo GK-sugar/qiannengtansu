@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+# build
+dist/
+dist-ssr/
+backend/target/
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+# env & local
+.env
+.env.local
+backend/.env
+application-local.yml
+# runtime data
+*.db
+*.sqlite3
+uploads/
+backend/uploads/
+backend/data/
+# logs
+*.log
+logs/
+# editor
+.idea/
+.vscode/
+.DS_Store

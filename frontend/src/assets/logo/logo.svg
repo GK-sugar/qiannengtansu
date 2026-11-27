@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 88" width="340" height="88">
+  <g transform="translate(4,4)">
+    <defs>
+      <linearGradient id="qnG" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#00e0a4"/>
+        <stop offset="0.55" stop-color="#00b581"/>
+        <stop offset="1" stop-color="#00a3d8"/>
+      </linearGradient>
+      <radialGradient id="qnCore" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="1" stop-color="#d8fff1"/>
+      </radialGradient>
+    </defs>
+    <g transform="translate(8,8) scale(0.78)">
+      <path d="M64 6 L116.2 36.14 V91.86 L64 122 L11.8 91.86 V36.14 Z" fill="url(#qnG)"/>
+      <g stroke="#ffffff" stroke-width="3.4" fill="none" stroke-linecap="round" opacity="0.95">
+        <ellipse cx="64" cy="64" rx="31" ry="13.5"/>
+        <ellipse cx="64" cy="64" rx="31" ry="13.5" transform="rotate(60 64 64)"/>
+        <ellipse cx="64" cy="64" rx="31" ry="13.5" transform="rotate(-60 64 64)"/>
+      </g>
+      <circle cx="64" cy="64" r="10.5" fill="url(#qnCore)"/>
+      <circle cx="93" cy="51" r="5" fill="#a6f5ff"/>
+    </g>
+    <text x="120" y="46" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="30" font-weight="700" fill="#0b1524">黔能碳溯</text>
+    <text x="121" y="68" font-family="Arial, sans-serif" font-size="11.5" letter-spacing="2.6" fill="#5c6b82">QNCT · CARBON TRACE SYSTEM</text>
+  </g>
+</svg>

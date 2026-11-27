@@ -1,0 +1,98 @@
+# ============================================================
+# 黔能碳溯 · 一键部署编排（backend + frontend/nginx + mysql + redis）
+# 启动：  docker compose --env-file .env up -d --build
+# 访问：  http://localhost/   （前端，80 端口）
+#         http://localhost:8082/actuator/health （后端）
+# ============================================================
+name: qnct
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: qnct-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-qnct123456}
+      MYSQL_DATABASE: ${MYSQL_DB:-qnct}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    container_name: qnct-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: qnct-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SERVER_PORT: "8082"
+      TZ: Asia/Shanghai
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DB: ${MYSQL_DB:-qnct}
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-qnct123456}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      # ----------【此处需填入API Key】留空自动降级演示 ----------
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      LLM_MODEL: ${LLM_MODEL:-qwen-plus}
+      VL_MODEL: ${VL_MODEL:-qwen3-vl-plus}
+      AMAP_WEB_KEY: ${AMAP_WEB_KEY:-}
+      STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
+      OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    expose:
+      - "8082"
+    volumes:
+      - backend-data:/app/data
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: qnct-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:
+  redis-data:
+  backend-data:

@@ -1,0 +1,96 @@
+# ============================================================
+# 黔能碳溯 · 后端主配置（公共部分）
+# 环境差异化配置见 application-dev.yml / application-prod.yml
+# ============================================================
+server:
+  # 统一端口 8082：IDEA 直接 Run 与后台常驻实例（scripts/start-backend.ps1）同一端口，同一时间只能运行一个后端
+  port: 8082
+  servlet:
+    context-path: /
+  tomcat:
+    threads:
+      max: 200
+
+spring:
+  application:
+    name: qnct-backend
+  config:
+    # 自动读取 backend/.env 中的密钥（IDEA 直接 Run 时无需手动配环境变量）
+    import:
+      - optional:file:./backend/.env[.properties]
+      - optional:file:./.env[.properties]
+  profiles:
+    # dev = 开发公共配置；local = 本机专属配置（application-local.yml，含真实密码，已 gitignore）。
+    # 换机器没有 local 文件也不报错，自动只用 dev。
+    active: dev,local
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 30MB
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+
+# ---------- MyBatis-Plus ----------
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    banner: false
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      id-type: auto
+
+# ---------- 应用自定义参数 ----------
+app:
+  jwt:
+    # 生产环境请替换为随机长字符串（>=32 字符）
+    secret: qnct-demo-secret-key-please-rotate-2026-11
+    expire-minutes: 120
+  hash:
+    # F10 哈希链盐值：更换后全链指纹重算（谨慎修改）
+    salt: QNCT-SITE-SALT-2026
+  llm:
+    # ========== 大模型 / 多模态视觉【此处需填入API Key】==========
+    # 申请：阿里云百炼控制台 https://bailian.console.aliyun.com/
+    # API-KEY 创建后填入 DASHSCOPE_API_KEY（启动参数 --DASHSCOPE_API_KEY=sk-xxx 或环境变量）
+    api-key: ${DASHSCOPE_API_KEY:}
+    base-url: ${LLM_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
+    model: ${LLM_MODEL:qwen-plus}
+    vl-model: ${VL_MODEL:qwen3-vl-plus}
+  amap:
+    # ========== 高德 Web 服务【此处需填入API Key】==========
+    # 申请：https://console.amap.com/ → 应用管理 → 添加 Key（Web服务）
+    web-key: ${AMAP_WEB_KEY:}
+  storage:
+    type: ${STORAGE_TYPE:local}
+    local-dir: ${STORAGE_LOCAL_DIR:./data}
+    oss:
+      # ========== 阿里云 OSS【此处需填入API Key】==========
+      # 申请：https://ram.console.aliyun.com/ 创建 AccessKey；https://oss.console.aliyun.com/ 创建 Bucket
+      endpoint: ${OSS_ENDPOINT:}
+      bucket: ${OSS_BUCKET:}
+      access-key-id: ${OSS_ACCESS_KEY_ID:}
+      access-key-secret: ${OSS_ACCESS_KEY_SECRET:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+  health:
+    redis:
+      # Redis 目前无业务使用（Token 为无状态 JWT），健康检查不检测它；
+      # 未启动 Redis 时 health 仍为 UP。将来启用 Redis（如 Token 黑名单）时删掉此行即可。
+      enabled: false
+
+logging:
+  level:
+    com.qnct: info

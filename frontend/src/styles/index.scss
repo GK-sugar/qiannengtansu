@@ -1,0 +1,151 @@
+/* ==========================================================================
+   黔能碳溯 · 全局设计系统
+   设计语言：深炭底色 + 科技翡翠绿 + 大面积留白 + 柔和阴影 + 细腻动效
+   ========================================================================== */
+
+:root {
+  /* 品牌色 */
+  --qn-primary: #00b581;
+  --qn-primary-dark: #009c6d;
+  --qn-primary-light: #2bd8a2;
+  --qn-accent: #00d1ff;
+  --qn-gradient: linear-gradient(135deg, #00b581 0%, #00d1ff 100%);
+
+  /* 深色系 */
+  --qn-ink: #0b1524;
+  --qn-ink-2: #12213a;
+  --qn-deep: #060d1b;
+
+  /* 中性色 */
+  --qn-bg: #f2f5f9;
+  --qn-card: #ffffff;
+  --qn-border: #e6ebf2;
+  --qn-text: #1b2a3f;
+  --qn-text-2: #5c6b82;
+  --qn-text-3: #93a1b5;
+
+  --qn-radius: 12px;
+  --qn-shadow: 0 6px 24px rgba(15, 39, 73, 0.06);
+  --qn-shadow-lg: 0 16px 48px rgba(15, 39, 73, 0.12);
+
+  /* Element Plus 主题色覆写 */
+  --el-color-primary: #00b581;
+  --el-color-primary-light-3: #4ccda4;
+  --el-color-primary-light-5: #80ddbf;
+  --el-color-primary-light-7: #b3ebd9;
+  --el-color-primary-light-8: #ccf2e6;
+  --el-color-primary-light-9: #e6f9f2;
+  --el-color-primary-dark-2: #009c6d;
+  --el-border-radius-base: 8px;
+  --el-font-family: 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  color: var(--qn-text);
+  background: var(--qn-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #ccd5e0; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #aebccd; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- 通用页面容器 ---------- */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: page-in 0.4s ease both;
+}
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  /* 结束帧必须为 none：保留 translateY(0) 会让 .page 成为 fixed 定位的包含块，
+     导致页内 el-dialog 遮罩只覆盖页面一小块区域、弹窗显示不全 */
+  to { opacity: 1; transform: none; }
+}
+
+.page-card {
+  background: var(--qn-card);
+  border-radius: var(--qn-radius);
+  border: 1px solid var(--qn-border);
+  padding: 20px;
+  box-shadow: var(--qn-shadow);
+}
+
+.page-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.page-card-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--qn-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-card-title h3::before {
+  content: '';
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--qn-gradient);
+}
+
+/* ---------- 页面顶部问候区 ---------- */
+.hero-banner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 28px 32px;
+  color: #fff;
+  background: linear-gradient(120deg, #062b3a 0%, #075e54 45%, #00695c 100%);
+  box-shadow: 0 12px 40px rgba(0, 107, 84, 0.25);
+}
+.hero-banner::after {
+  content: '';
+  position: absolute;
+  right: -80px;
+  top: -120px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 209, 255, 0.35) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-banner .title { font-size: 24px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
+.hero-banner .sub { font-size: 13px; opacity: 0.85; }
+
+/* ---------- 渐变文字 ---------- */
+.grad-text {
+  background: var(--qn-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------- 路由过渡 ---------- */
+.fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.25s ease; }
+.fade-slide-enter-from { opacity: 0; transform: translateX(14px); }
+.fade-slide-leave-to { opacity: 0; transform: translateX(-14px); }
+
+/* ---------- 统计卡片数字动效 ---------- */
+.num-roll { font-variant-numeric: tabular-nums; }
+
+/* ---------- 深色大屏通用 ---------- */
+.screen-panel {
+  background: rgba(10, 28, 48, 0.55);
+  border: 1px solid rgba(0, 209, 255, 0.18);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+}
