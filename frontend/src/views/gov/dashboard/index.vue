@@ -5,7 +5,7 @@
       <div class="sub">{{ auth.user?.orgName }} · 应对气候变化处 ｜ 全省 2,384 家企业纳入监测</div>
       <div class="banner-btn">
         <el-button type="primary" round @click="$router.push('/gov/big-screen')"><el-icon><DataBoard /></el-icon>进入态势大屏</el-button>
-        <el-button round plain style="color:#fff;border-color:rgba(255,255,255,.5)" @click="$router.push('/gov/review')">开始初审</el-button>
+        <el-button round plain style="color:rgba(0, 0, 0);border-color:rgba(255,255,255,.5)" @click="$router.push('/gov/review')">开始初审</el-button>
       </div>
     </div>
 

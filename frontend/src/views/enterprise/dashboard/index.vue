@@ -6,7 +6,7 @@
       <div class="sub">{{ auth.user?.orgName }} ｜ 核算期 2026-09 ｜ 数据健康度 98% ｜ 距离下一期填报还有 4 天</div>
       <div class="banner-btn">
         <el-button type="primary" round @click="$router.push('/enterprise/data-entry')">去填报</el-button>
-        <el-button round plain style="color:#fff;border-color:rgba(255,255,255,.5)" @click="$router.push('/enterprise/ai')">问 AI 碳管家</el-button>
+        <el-button round plain style="color:rgba(0, 0, 0);border-color:rgba(255,255,255,.5)" @click="$router.push('/enterprise/ai')">问 AI 碳管家</el-button>
       </div>
     </div>
 
@@ -14,7 +14,7 @@
     <div class="stat-grid">
       <StatCard label="本月碳排放（tCO₂e）" :value="12864" icon="Odometer" suffix=" t" trend="+3.2%" trend-type="down" extra="较上月 -2.8%" />
       <StatCard label="产品碳强度" :value="0.642" icon="TrendCharts" suffix=" tCO₂e/t" tint="#00d1ff" trend="-1.5%" extra="优于行业均值 12%" />
-      <StatCard label="护照申请" value="8" icon="Stamp" tint="#a06bff" extra="2 本已签发 · 3 本在途 · 3 本退回" :animated="false" />
+      <StatCard label="护照申请" :value="8" icon="Stamp" tint="#a06bff" extra="2 本已签发 · 3 本在途 · 3 本退回" :animated="false" />
       <StatCard label="绿色金融信誉分" :value="87" icon="Money" tint="#ffb020" trend="+5" extra="A 级 · 预授信 1,200 万" />
     </div>
 
