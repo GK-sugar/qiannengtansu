@@ -48,12 +48,12 @@ mybatis-plus:
 # ---------- 应用自定义参数 ----------
 app:
   jwt:
-    # 生产环境请替换为随机长字符串（>=32 字符）
-    secret: qnct-demo-secret-key-please-rotate-2026-11
-    expire-minutes: 120
+    # 生产环境请通过 JWT_SECRET 配置随机长字符串（>=32 字符）
+    secret: ${JWT_SECRET:qnct-demo-secret-key-please-rotate-2026-11}
+    expire-minutes: ${JWT_EXPIRE_MINUTES:120}
   hash:
-    # F10 哈希链盐值：更换后全链指纹重算（谨慎修改）
-    salt: QNCT-SITE-SALT-2026
+    # F10 哈希链盐值：可通过 HASH_SALT 配置；更换后全链指纹重算（谨慎修改）
+    salt: ${HASH_SALT:QNCT-SITE-SALT-2026}
   llm:
     # ========== 大模型 / 多模态视觉【此处需填入API Key】==========
     # 申请：阿里云百炼控制台 https://bailian.console.aliyun.com/
@@ -68,10 +68,11 @@ app:
     web-key: ${AMAP_WEB_KEY:}
   storage:
     type: ${STORAGE_TYPE:local}
+    # type=oss 时此项不生效，可保持默认值；仅 type=local 时填写本地存储目录。
     local-dir: ${STORAGE_LOCAL_DIR:./data}
     oss:
       # ========== 阿里云 OSS【此处需填入API Key】==========
-      # 申请：https://ram.console.aliyun.com/ 创建 AccessKey；https://oss.console.aliyun.com/ 创建 Bucket
+      # 申请：https://ram.console.aliyun.com/ 创建 AccessKey；https://oss.console.aliyun.com/ 创建 Bucket 查看OSS互联网访问地址(endpoint)
       endpoint: ${OSS_ENDPOINT:}
       bucket: ${OSS_BUCKET:}
       access-key-id: ${OSS_ACCESS_KEY_ID:}

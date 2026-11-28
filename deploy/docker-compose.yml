@@ -60,6 +60,9 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-qnct123456}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
+      JWT_SECRET: ${JWT_SECRET:-qnct-demo-secret-key-please-rotate-2026-11}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-120}
+      HASH_SALT: ${HASH_SALT:-QNCT-SITE-SALT-2026}
       # ----------【此处需填入API Key】留空自动降级演示 ----------
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
@@ -67,6 +70,7 @@ services:
       VL_MODEL: ${VL_MODEL:-qwen3-vl-plus}
       AMAP_WEB_KEY: ${AMAP_WEB_KEY:-}
       STORAGE_TYPE: ${STORAGE_TYPE:-local}
+      STORAGE_LOCAL_DIR: ${STORAGE_LOCAL_DIR:-./data}
       OSS_ACCESS_KEY_ID: ${OSS_ACCESS_KEY_ID:-}
       OSS_ACCESS_KEY_SECRET: ${OSS_ACCESS_KEY_SECRET:-}
       OSS_BUCKET: ${OSS_BUCKET:-}
