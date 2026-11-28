@@ -9,7 +9,7 @@
       <!-- 左：填报表单 -->
       <div class="page-card">
         <div class="page-card-title"><h3>2026 年 10 月 · 活动数据</h3>
-          <el-tag type="success" size="small" round>核算公式 F1</el-tag>
+          <el-tag type="success" size="small" round :title="formulaHint('F1')">核算公式 F1</el-tag>
         </div>
         <el-form :model="form" label-width="130px" label-position="left">
           <el-divider content-position="left"><span class="scope-tag scope1">范围一 · 直接排放（原煤燃烧）</span></el-divider>
@@ -73,6 +73,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { formulaHint } from '@/utils/formulas'
 
 const year = ref(2026)
 const form = reactive({

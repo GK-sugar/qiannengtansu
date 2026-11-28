@@ -2,7 +2,7 @@
   <div class="page">
     <div class="hero-banner">
       <div class="title">核查派单</div>
-      <div class="sub">异常企业生成线下核查任务，指派核查员；核查员手机打开 H5 打卡链接，GPS 定位 + 现场照片完成执法留痕</div>
+      <div class="sub">异常企业生成线下核查任务，由省厅执法核查员（胡工 / 周工 / 刘工，分黔中、黔北、黔南片区）赴现场；核查员手机打开 H5 打卡链接，GPS 定位 + 现场照片完成执法留痕（第三方核查机构仅参与国际标准复核，不参与执法打卡）</div>
     </div>
 
     <div class="stat-grid">
@@ -68,6 +68,7 @@ import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import StatCard from '@/components/StatCard.vue'
+import { publicOrigin } from '@/utils/publicUrl'
 
 const createVisible = ref(false)
 const newTask = reactive({ company: '贵州黔能矿业有限责任公司', content: '核实 10 月原煤消耗台账与销售发票一致性', inspector: '胡工 · 黔中片区', coord: '104.83,26.59', deadline: '2026-12-06' })
@@ -86,12 +87,16 @@ const tasks = [
 ]
 const tag = (s: string) => ({ 待派发: 'info', 执行中: 'warning', 已打卡: 'primary', 已完成: 'success' }[s] || 'info') as any
 
-function copyLink(row: { no: string }) {
-  const url = `${location.origin}/checkin/${row.no.toLowerCase()}`
+async function copyLink(row: { no: string }) {
+  const base = await publicOrigin()
+  const url = `${base}/checkin/${row.no.toLowerCase()}`
   navigator.clipboard?.writeText(url)
-  ElMessage.success('打卡链接已复制：' + url)
+  ElMessage.success('打卡链接已复制（手机需与电脑同一 Wi-Fi）：' + url)
 }
-function openCheckin(row: { no: string }) { window.open(`/checkin/${row.no.toLowerCase()}`, '_blank') }
+async function openCheckin(row: { no: string }) {
+  const base = await publicOrigin()
+  window.open(`${base}/checkin/${row.no.toLowerCase()}`, '_blank')
+}
 function onCreate() {
   ElMessage.success('任务已创建并短信通知核查员（未配置 SMS Key 时仅站内信）')
   createVisible.value = false

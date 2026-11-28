@@ -5,8 +5,8 @@
       <div class="title">早安，{{ auth.user?.realName }} · 今天也是减碳的一天 ☘</div>
       <div class="sub">{{ auth.user?.orgName }} ｜ 核算期 2026-09 ｜ 数据健康度 98% ｜ 距离下一期填报还有 4 天</div>
       <div class="banner-btn">
-        <el-button type="primary" round @click="$router.push('/enterprise/data-entry')">去填报</el-button>
-        <el-button round plain style="color:rgba(0, 0, 0);border-color:rgba(255,255,255,.5)" @click="$router.push('/enterprise/ai')">问 AI 碳管家</el-button>
+        <el-button round class="hero-solid" @click="$router.push('/enterprise/data-entry')">去填报</el-button>
+        <el-button round class="hero-ghost" @click="$router.push('/enterprise/ai')">问 AI 碳管家</el-button>
       </div>
     </div>
 

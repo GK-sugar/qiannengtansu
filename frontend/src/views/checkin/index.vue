@@ -132,6 +132,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { sha256Hex } from '@/utils/hash'
 
 const route = useRoute()
 
@@ -220,26 +221,25 @@ const doneVisible = ref(false)
 const doneTime = ref('')
 const doneHash = ref('')
 
-async function sha256Hex(seed: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed + Date.now()))
-  return Array.from(new Uint8Array(buf), (x) => x.toString(16).padStart(2, '0')).join('')
-}
-
 async function submit() {
   if (!photo.value) return
   submitting.value = true
-  doneHash.value = (await sha256Hex(task.value.taskNo)).slice(0, 40)
-  doneTime.value = new Date().toLocaleString('zh-CN', { hour12: false })
-  setTimeout(() => {
-    submitting.value = false
+  try {
+    doneHash.value = (await sha256Hex(task.value.taskNo + '|' + Date.now())).slice(0, 40)
+    doneTime.value = new Date().toLocaleString('zh-CN', { hour12: false })
+    await new Promise((r) => setTimeout(r, 900))
     doneVisible.value = true
-  }, 900)
+  } catch {
+    ElMessage.error('打卡提交失败，请重试')
+  } finally {
+    submitting.value = false
+  }
 }
 
 /* ---------- 初始化：由 taskId 派生确定性核查点 ---------- */
 async function seedOf(s: string): Promise<number> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
-  return parseInt(Array.from(new Uint8Array(buf), (x) => x.toString(16).padStart(2, '0')).join('').slice(0, 8), 16)
+  const hex = await sha256Hex(s)
+  return parseInt(hex.slice(0, 8), 16)
 }
 
 onMounted(async () => {

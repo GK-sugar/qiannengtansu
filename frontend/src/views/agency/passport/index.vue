@@ -44,7 +44,7 @@
         </div>
         <div class="pp-right">
           <div class="qr-wrap">
-            <qrcode-vue :value="verifyUrl" :size="180" level="M" class="qr-svg" />
+            <qrcode-vue :value="verifyUrl" :size="180" level="M" render-as="svg" :margin="1" class="qr-svg" />
             <div class="qr-tip">{{ issued ? '扫码验真' : '签发后生成' }} · 防伪令牌 {{ shortToken }}</div>
           </div>
           <div class="pp-meta">
@@ -67,9 +67,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import QrcodeVue from 'qrcode.vue'
+import { publicOrigin } from '@/utils/publicUrl'
 
 interface Pkg { company: string; product: string; period: string; c: number; passed: boolean; issued?: boolean; pushed?: boolean; no?: string }
 
@@ -94,7 +95,9 @@ const token = ref('')
 const hashShort = ref('')
 const issueNonce = ref(0)
 
-const verifyUrl = computed(() => `${location.origin}/verify/${token.value}`)
+const publicBase = ref(location.origin)
+onMounted(async () => { publicBase.value = await publicOrigin() })
+const verifyUrl = computed(() => `${publicBase.value}/verify/${token.value}`)
 const shortToken = computed(() => token.value.slice(0, 12))
 
 function genHex(n: number) { return Array.from({ length: n }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('') }
@@ -123,7 +126,7 @@ function doIssue() {
 
 function openVerifyNew() {
   dialogVisible.value = false
-  window.open('/verify/' + token.value, '_blank')
+  window.open(verifyUrl.value, '_blank')
 }
 </script>
 
@@ -174,4 +177,11 @@ function openVerifyNew() {
   .pm-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e3ebf2;
     b { color: var(--qn-text); text-align: right; }.mono { font-family: monospace; font-size: 11px; } } }
 .pp-seal { width: 106px; height: 106px; position: absolute; right: 22px; bottom: 18px; opacity: 0.9; transform: rotate(-8deg); filter: drop-shadow(0 3px 6px rgba(180,30,30,0.2)); }
+@media (max-width: 700px) {
+  .passport { grid-template-columns: 1fr; min-height: 0; }
+  .pp-left, .pp-right { padding: 22px 18px; }
+  .pp-right { align-items: flex-start; }
+  .pp-title { font-size: 24px; letter-spacing: 4px; }
+  .pp-seal { position: static; align-self: flex-end; margin-top: 6px; }
+}
 </style>

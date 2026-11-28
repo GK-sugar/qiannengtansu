@@ -58,6 +58,14 @@
           <el-form-item>
             <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" :prefix-icon="Lock" />
           </el-form-item>
+          <el-form-item>
+            <div class="captcha-row">
+              <el-input v-model="captchaInput" maxlength="4" placeholder="请输入验证码" :prefix-icon="Key" />
+              <button type="button" class="captcha-img" title="看不清？点击换一张" @click="refreshCaptcha">
+                <canvas ref="captchaRef" width="240" height="80"></canvas>
+              </button>
+            </div>
+          </el-form-item>
           <div class="card-options">
             <el-checkbox v-model="remember">记住我</el-checkbox>
             <a class="forget" @click.prevent="hint">忘记密码？请联系平台管理员</a>
@@ -109,7 +117,7 @@
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, Key } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 import { DEMO_USERS, demoUserMap, getPassword } from '@/utils/demo'
 import type { RoleKey } from '@/utils/demo'
@@ -127,6 +135,15 @@ async function onLogin() {
     ElMessage.warning('请输入账号与密码')
     return
   }
+  if (!captchaInput.value.trim()) {
+    ElMessage.warning('请输入图形验证码')
+    return
+  }
+  if (captchaInput.value.trim().toUpperCase() !== captchaCode) {
+    ElMessage.error('验证码不正确，请重新输入')
+    refreshCaptcha()
+    return
+  }
   loading.value = true
   try {
     const user = await auth.login(form.username, form.password)
@@ -134,6 +151,7 @@ async function onLogin() {
     router.push((route.query.redirect as string) || user.homePath)
   } catch (e: any) {
     ElMessage.error(e?.message || '登录失败')
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -143,7 +161,58 @@ function quickLogin(key: RoleKey) {
   const u = demoUserMap[key]
   form.username = u.username
   form.password = getPassword(u.username) ?? u.password
+  refreshCaptcha()
+  captchaInput.value = captchaCode
   onLogin()
+}
+
+/* ================= 图形验证码 ================= */
+const CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const captchaRef = ref<HTMLCanvasElement>()
+const captchaInput = ref('')
+let captchaCode = ''
+
+function refreshCaptcha() {
+  captchaCode = Array.from({ length: 4 }, () => CAPTCHA_CHARS[Math.floor(Math.random() * CAPTCHA_CHARS.length)]).join('')
+  captchaInput.value = ''
+  const cv = captchaRef.value
+  const ctx = cv?.getContext('2d')
+  if (!cv || !ctx) return
+  const w = cv.width
+  const h = cv.height
+  const bg = ctx.createLinearGradient(0, 0, w, 0)
+  bg.addColorStop(0, '#0d2c40')
+  bg.addColorStop(1, '#08203a')
+  ctx.fillStyle = bg
+  ctx.fillRect(0, 0, w, h)
+
+  for (let i = 0; i < 6; i++) {
+    ctx.strokeStyle = `rgba(${90 + Math.random() * 90},${150 + Math.random() * 80},${190 + Math.random() * 65},0.35)`
+    ctx.lineWidth = 1 + Math.random() * 1.6
+    ctx.beginPath()
+    ctx.moveTo(Math.random() * w, Math.random() * h)
+    ctx.lineTo(Math.random() * w, Math.random() * h)
+    ctx.stroke()
+  }
+  for (let i = 0; i < 70; i++) {
+    ctx.fillStyle = `rgba(140,220,255,${0.15 + Math.random() * 0.35})`
+    ctx.beginPath()
+    ctx.arc(Math.random() * w, Math.random() * h, Math.random() * 1.6, 0, Math.PI * 2)
+    ctx.fill()
+  }
+
+  const palette = ['#5cf0c6', '#7ee7c4', '#6bd4ff', '#a9ecff']
+  ctx.font = 'bold 46px "Segoe UI", Arial, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  for (let i = 0; i < captchaCode.length; i++) {
+    ctx.save()
+    ctx.translate(34 + i * 58, h / 2 + 4)
+    ctx.rotate((Math.random() - 0.5) * 0.5)
+    ctx.fillStyle = palette[Math.floor(Math.random() * palette.length)]
+    ctx.fillText(captchaCode[i], 0, 0)
+    ctx.restore()
+  }
 }
 
 const hintVisible = ref(false)
@@ -259,6 +328,7 @@ function onVisibility() {
 }
 
 onMounted(() => {
+  refreshCaptcha()
   initScene()
   raf = requestAnimationFrame(draw)
   window.addEventListener('resize', onResize)
@@ -384,6 +454,16 @@ onBeforeUnmount(() => {
 .card-title { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
 .card-sub { font-size: 11px; color: #66809f; letter-spacing: 2px; margin-top: 6px; text-transform: uppercase; }
 .card-options { display: flex; justify-content: space-between; align-items: center; margin: -4px 0 18px; font-size: 12px; }
+.captcha-row { display: flex; width: 100%; gap: 10px; align-items: stretch;
+  :deep(.el-input) { flex: 1; } }
+.captcha-img {
+  flex: none; width: 116px; height: 40px; padding: 0; cursor: pointer;
+  border-radius: 8px; overflow: hidden; line-height: 0;
+  background: #0a1a2e; border: 1px solid rgba(130, 190, 255, 0.22);
+  transition: border-color 0.2s ease;
+  canvas { width: 100%; height: 100%; display: block; }
+  &:hover { border-color: rgba(0, 209, 255, 0.55); }
+}
 .forget { color: #5aa8d8; cursor: pointer; }
 .login-btn {
   width: 100%;

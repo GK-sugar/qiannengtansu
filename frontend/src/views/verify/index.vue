@@ -20,7 +20,8 @@
     </header>
 
     <main class="vp-main">
-      <!-- ========== 左：护照展示 ========== -->
+      <!-- ========== 左：护照展示 + 验真结论 ========== -->
+      <div class="vp-left">
       <section class="vp-pass">
         <div class="pp-ribbon">CARBON FOOTPRINT PASSPORT · 双轨合规认证</div>
         <div class="pp-body">
@@ -37,10 +38,11 @@
               <div class="pp-row"><label>核查标准</label><b>ISO 14067 / EU CBAM</b></div>
             </div>
             <div class="pp-qr">
-              <qrcode-vue :value="selfUrl" :size="92" level="M" class="qr-svg" />
+              <qrcode-vue :value="selfUrl" :size="104" level="M" render-as="svg" :margin="1" class="qr-svg" />
               <div class="pp-qr-txt">
                 <div class="pp-qr-t">扫码验真</div>
                 <div class="pp-qr-s">防伪令牌 {{ shortToken }}</div>
+                <div v-if="isLocalOrigin" class="pp-qr-hint">手机需与电脑同一网络 · {{ qrHost }}</div>
               </div>
             </div>
           </div>
@@ -54,7 +56,20 @@
         </div>
       </section>
 
-      <!-- ========== 右：核算汇总 / 存证哈希 / 验链结论 ========== -->
+      <!-- 验真结论 -->
+      <div class="vp-stamp">
+        <div class="vs-left">
+          <div class="vs-time">{{ verifyTime }}</div>
+          <div class="vs-token mono"><i class="pulse-dot"></i>Token {{ shortToken }} · 校验通过（F11）</div>
+        </div>
+        <div class="vs-right">
+          <img src="@/assets/seal/gov-seal.svg" class="vs-seal" />
+          <span>验真完成</span>
+        </div>
+      </div>
+      </div>
+
+      <!-- ========== 右：核算汇总 / 存证哈希 ========== -->
       <section class="vp-right">
         <!-- 核算汇总 -->
         <div class="vp-card">
@@ -102,18 +117,6 @@
             </div>
           </div>
         </div>
-
-        <!-- 验真结论 -->
-        <div class="vp-stamp">
-          <div class="vs-left">
-            <div class="vs-time">{{ verifyTime }}</div>
-            <div class="vs-token mono"><i class="pulse-dot"></i>Token {{ shortToken }} · 校验通过（F11）</div>
-          </div>
-          <div class="vs-right">
-            <img src="@/assets/seal/gov-seal.svg" class="vs-seal" />
-            <span>验真完成</span>
-          </div>
-        </div>
       </section>
     </main>
 
@@ -125,6 +128,8 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
+import { publicOrigin, isLocalOrigin } from '@/utils/publicUrl'
+import { sha256Hex } from '@/utils/hash'
 
 const route = useRoute()
 
@@ -150,18 +155,15 @@ interface Block { name: string; dataText: string; hash: string; ok: boolean; tou
 const blocks = ref<Block[]>([])
 const chainOk = ref(true)
 
-const selfUrl = computed(() => location.origin + '/verify/' + route.params.token)
+const qrBase = ref(location.origin)
+const qrHost = computed(() => qrBase.value.replace(/^https?:\/\//, ''))
+const selfUrl = computed(() => qrBase.value + '/verify/' + route.params.token)
 const fullToken = ref('')
 const shortToken = computed(() => (fullToken.value || '').slice(0, 16).toUpperCase())
 const verifyTime = computed(() => new Date().toLocaleString('zh-CN', { hour12: false }))
 
-async function sha256(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
-  return Array.from(new Uint8Array(buf), (x) => x.toString(16).padStart(2, '0')).join('')
-}
-
 async function seedFromToken(t: string): Promise<number> {
-  const h = await sha256(t)
+  const h = await sha256Hex(t)
   return parseInt(h.slice(0, 8), 16)
 }
 
@@ -181,21 +183,21 @@ async function init() {
     { name: '护照签发', data: { passportNo: pno.value, standard: 'ISO 14067 / CBAM' } }
   ]
 
-  let ledgerPrev = await sha256('QNCT-GENESIS' + '\u0001' + SALT) // 链上账本：始终按原始数据推进
+  let ledgerPrev = await sha256Hex('QNCT-GENESIS' + '\u0001' + SALT) // 链上账本：始终按原始数据推进
   let dirtyPrev = ledgerPrev                                        // 现场副本：用读取到的数据重算
   let allOk = true
   const list: Block[] = []
 
   for (let i = 0; i < tx.length; i++) {
     const clean = JSON.stringify(tx[i].data)
-    ledgerPrev = await sha256(ledgerPrev + '\u0001' + clean + '\u0002' + SALT)
+    ledgerPrev = await sha256Hex(ledgerPrev + '\u0001' + clean + '\u0002' + SALT)
 
     // 篡改演示：默认篡改首个区块，验证“断链传导”
     let dirtyText = clean
     if (tampered.value && i === 0) {
       dirtyText = JSON.stringify({ period: tx[i].data.period, total: 99999 })
     }
-    dirtyPrev = await sha256(dirtyPrev + '\u0001' + dirtyText + '\u0002' + SALT)
+    dirtyPrev = await sha256Hex(dirtyPrev + '\u0001' + dirtyText + '\u0002' + SALT)
 
     const ok = dirtyPrev === ledgerPrev
     if (!ok) allOk = false
@@ -212,11 +214,14 @@ async function init() {
   chainOk.value = allOk
 
   // F11：防伪令牌 = SHA256(passport_no + ':' + site_salt)，取前 16 位展示
-  fullToken.value = await sha256(pno.value + ':' + SALT)
+  fullToken.value = await sha256Hex(pno.value + ':' + SALT)
 }
 
 watch(tampered, () => { void init() })
-onMounted(init)
+onMounted(async () => {
+  qrBase.value = await publicOrigin()
+  await init()
+})
 </script>
 
 <style scoped lang="scss">
@@ -252,6 +257,7 @@ onMounted(init)
 
 .vp-main { position: relative; z-index: 2; width: min(1240px, 94vw); margin: 10px auto 0;
   display: grid; grid-template-columns: 7.2fr 8fr; gap: 26px; align-items: start; }
+.vp-left { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
 
 /* ---------- 护照 ---------- */
 .vp-pass { border-radius: 22px; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,209,255,0.12);
@@ -271,7 +277,8 @@ onMounted(init)
 .pp-qr { margin-top: 20px; display: flex; align-items: center; gap: 14px;
   .qr-svg { border-radius: 10px; background: #fff; box-shadow: 0 8px 22px rgba(16,54,50,0.16); }
   .pp-qr-txt { .pp-qr-t { font-size: 13px; font-weight: 700; color: #063b31; letter-spacing: 2px; }
-    .pp-qr-s { font-size: 11px; color: #7c948e; margin-top: 4px; font-family: ui-monospace, Consolas, monospace; } } }
+    .pp-qr-s { font-size: 11px; color: #7c948e; margin-top: 4px; font-family: ui-monospace, Consolas, monospace; }
+    .pp-qr-hint { margin-top: 3px; font-size: 10px; color: #8aa39d; line-height: 1.4; } } }
 .pp-side { background: linear-gradient(180deg, #073d33 0%, #052e26 100%); display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 24px 14px 26px; position: relative;
   &::before { content: ''; position: absolute; inset: 0; background-image: radial-gradient(220px 180px at 50% 8%, rgba(0,209,255,0.28), transparent 70%); } }
 .pp-seal { width: 120px; height: 120px; transform: rotate(-10deg); filter: drop-shadow(0 4px 8px rgba(0,0,0,0.35)); position: relative; }
@@ -339,7 +346,62 @@ onMounted(init)
 
 .mono { font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace; }
 @media (max-width: 960px) {
-  .vp-main { grid-template-columns: 1fr; }
+  .vp-main { grid-template-columns: 1fr; gap: 18px; }
   .vp-open { display: none; }
+}
+@media (max-width: 640px) {
+  .verify-page { padding-bottom: 26px; }
+  .vp-head { width: 94vw; padding: 14px 0; }
+  .vp-head-right { display: none; }
+  .vp-brand { gap: 10px; }
+  .vp-logo { width: 36px; height: 36px; }
+  .vp-name { font-size: 19px !important; letter-spacing: 1px; }
+  .vp-tag { font-size: 9.5px !important; letter-spacing: 1px !important; }
+  .vp-main { width: 94vw; margin-top: 4px; gap: 14px; }
+  .vp-left { gap: 14px; }
+
+  .pp-ribbon { font-size: 8.5px; letter-spacing: 1.5px; padding: 8px 6px; }
+  .pp-body { grid-template-columns: 1fr; }
+  .pp-info { padding: 20px 18px 18px; }
+  .pp-title { font-size: 24px; letter-spacing: 4px; }
+  .pp-sub { font-size: 10.5px; letter-spacing: 1px; margin: 5px 0 14px; }
+  .pp-row { padding: 8px 0; font-size: 12px;
+    b.mono { font-size: 11px; letter-spacing: 0; }
+    b.pp-carbon { font-size: 17px; i { font-size: 10px; } } }
+  .pp-qr { margin-top: 16px; gap: 12px;
+    .pp-qr-t { font-size: 12px; letter-spacing: 1px; }
+    .pp-qr-s { font-size: 10px; } }
+  .pp-side { flex-direction: row; justify-content: center; gap: 14px; padding: 14px; }
+  .pp-seal { width: 64px; height: 64px; }
+  .pp-sig { margin-top: 0;
+    .pp-sig-line { display: none; }
+    span { font-size: 10px; letter-spacing: .5px; } }
+
+  .vp-card { padding: 16px; border-radius: 14px; }
+  .vc-head { margin-bottom: 12px; gap: 8px; flex-wrap: wrap;
+    h3 { font-size: 14px; letter-spacing: .5px; } }
+  .vc-head :deep(.el-button) { display: none; }
+  .scope-item { padding: 9px 10px; }
+  .si-row { gap: 8px; font-size: 11.5px; }
+  .si-pct { width: 38px; }
+  .total-row { padding: 11px 12px; gap: 4px; flex-wrap: wrap;
+    span { font-size: 11px; }
+    b { font-size: 14px; em { display: block; margin-left: 0; margin-top: 2px; font-size: 10px; } } }
+  .chain-link { padding: 10px 12px; }
+  .cl-head { gap: 6px; flex-wrap: wrap; font-size: 11.5px; }
+  .cl-tag { font-size: 9.5px; }
+  .cl-data { font-size: 10.5px; }
+  .cl-hash { font-size: 10px; }
+  .chain-result { padding: 12px; gap: 10px; }
+  .cr-icon { width: 32px; height: 32px; font-size: 16px; }
+  .cr-title { font-size: 13px; }
+  .cr-sub { font-size: 10px; }
+
+  .vp-stamp { padding: 14px 16px; gap: 10px; flex-direction: column; align-items: stretch; }
+  .vs-time { font-size: 11px; }
+  .vs-token { font-size: 11px; word-break: break-all; }
+  .vs-seal { width: 48px; height: 48px; }
+  .vs-right { gap: 8px; align-self: flex-end; span { font-size: 12px; letter-spacing: 1px; } }
+  .vp-foot { margin-top: 22px; font-size: 9.5px; letter-spacing: 1px; padding: 0 16px; }
 }
 </style>

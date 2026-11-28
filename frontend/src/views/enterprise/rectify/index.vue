@@ -12,7 +12,7 @@
           <h3>整改事项清单</h3>
           <el-tag size="small" round type="danger">{{ items.filter(i => i.status === '待整改').length }} 项待整改</el-tag>
         </div>
-        <el-table :data="items" size="small" highlight-current-row @current-change="(cur) => current = cur">
+        <el-table :data="items" size="small" highlight-current-row @current-change="onSelect">
           <el-table-column prop="no" label="事项编号" width="128">
             <template #default="{ row }"><span class="mono">{{ row.no }}</span></template>
           </el-table-column>
@@ -28,9 +28,11 @@
               <el-tag size="small" :type="row.status === '已闭环' ? 'success' : row.status === '整改中' ? 'primary' : 'danger'" round>{{ row.status }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="108">
+          <el-table-column label="操作" width="100">
             <template #default="{ row }">
-              <el-button link type="primary" size="small" @click="openGenerate(row)">生成计划</el-button>
+              <el-button v-if="row.status === '待整改'" link type="primary" size="small" @click="openGenerate(row)">生成计划</el-button>
+              <el-button v-else-if="row.status === '整改中'" link type="success" size="small" @click="openClose(row)">提交闭环</el-button>
+              <el-button v-else link type="info" size="small" @click="onSelect(row)">查看计划</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -42,17 +44,17 @@
         <div class="page-card-title">
           <h3>整改计划 · {{ current?.no || '未选择' }}</h3>
           <div class="title-actions">
-            <el-button size="small" plain :disabled="!current" :loading="genLoading" @click="openGenerate(current)">AI 重新生成</el-button>
-            <el-button size="small" type="primary" :disabled="!plan.length" @click="savePlan">保存计划</el-button>
+            <el-button size="small" plain :disabled="!current || current.status !== '待整改'" :loading="genLoading" @click="openGenerate(current)">AI 生成计划</el-button>
+            <el-button size="small" type="primary" :disabled="!currentPlan.length || current?.status === '已闭环'" @click="savePlan">{{ current?.status === '整改中' ? '保存进度' : '保存计划' }}</el-button>
           </div>
         </div>
-        <div v-if="!plan.length" class="plan-empty">
+        <div v-if="!currentPlan.length" class="plan-empty">
           <div class="pe-icon"><el-icon :size="30"><MagicStick /></el-icon></div>
-          <div>选择左侧事项后点击「生成计划」</div>
+          <div>{{ current?.status === '已闭环' ? '该事项已闭环，暂无计划快照' : '选择左侧事项后点击「生成计划」' }}</div>
           <div class="pe-sub">AI 将依据事项类型、风险等级与行业案例库生成措施清单</div>
         </div>
         <div v-else class="plan-list">
-          <div v-for="(p, i) in plan" :key="i" class="plan-item" :style="{ '--d': i }">
+          <div v-for="(p, i) in currentPlan" :key="i" class="plan-item" :style="{ '--d': i }">
             <div class="pi-seq">{{ i + 1 }}</div>
             <div class="pi-body">
               <div class="pi-text">{{ p.measure }}</div>
@@ -62,7 +64,7 @@
                 <span :class="['pri', 'pri-' + p.pri]">{{ '优先级 ' + p.pri }}</span>
               </div>
             </div>
-            <el-switch v-model="p.done" />
+            <el-switch v-model="p.done" :disabled="current?.status === '已闭环'" />
           </div>
           <div class="plan-sum">
             <span>总工期：<b>{{ totalDays }} 天</b></span>
@@ -80,7 +82,7 @@
         <h3>整改预算预估（分项估算）</h3>
         <div class="title-actions">
           <el-tag size="small" round type="info">基准价 × 工程量 → 小计 → +10% 预备费</el-tag>
-          <el-button size="small" type="primary" plain :disabled="!plan.length" @click="genBudget">按计划生成预算</el-button>
+          <el-button size="small" type="primary" plain :disabled="!currentPlan.length" @click="genBudget">按计划生成预算</el-button>
         </div>
       </div>
       <el-table :data="budgetRows" size="small" show-summary :summary-method="summaryRow">
@@ -102,7 +104,7 @@
         <div class="bf-item"><span>不可预见费（10%）</span><b>{{ contingencyFmt }} 元</b></div>
         <el-icon class="bf-plus"><Plus /></el-icon>
         <div class="bf-item total"><span>整改预算总额</span><b>{{ grandFmt }} 元</b></div>
-        <el-button type="primary" size="large" :disabled="!plan.length" :loading="submitLoading" @click="submitBudget">提交预算审批</el-button>
+        <el-button type="primary" size="large" :disabled="!currentPlan.length || current?.status === '已闭环'" :loading="submitLoading" @click="submitBudget">提交预算审批</el-button>
       </div>
       <div class="dim-note"><el-icon><InfoFilled /></el-icon>预算依据：行业技改项目基准计价 × 本次整改工程量，人工可调整；提交后推送企业财务线与省厅备案，全流程写入审计日志</div>
     </div>
@@ -116,17 +118,54 @@
           <div class="gen-sub">模型正在结合事项类型、行业整改案例库与预算基准价生成…</div>
         </template>
         <template v-else>
-          <el-result icon="success" :title="'已生成 ' + plan.length + ' 条整改措施'" sub-title="含责任部门、完成时限与优先级，可在右侧微调后保存" />
+          <el-result icon="success" :title="'已生成 ' + currentPlan.length + ' 条整改措施'" sub-title="含责任部门、完成时限与优先级，可在右侧微调后保存" />
         </template>
       </div>
+    </el-dialog>
+
+    <!-- 闭环确认 -->
+    <el-dialog v-model="closeVisible" title="整改闭环确认" width="620px">
+      <div v-if="closeRow" class="close-issue">
+        <span class="ci-no">{{ closeRow.no }}</span>
+        <span class="ci-topic">{{ closeRow.topic }}</span>
+      </div>
+      <div class="close-progress">
+        <span>措施完成度</span>
+        <el-progress :percentage="closePct" :stroke-width="9" :color="closePct === 100 ? '#00b581' : '#e6a23c'" style="flex: 1" />
+        <b :class="{ ok: closePct === 100 }">{{ closePct }}%</b>
+      </div>
+      <el-alert v-if="closePct < 100" type="warning" show-icon :closable="false"
+        title="仍有整改措施未完成，请先在右侧逐项勾选后再提交闭环" style="margin-bottom: 14px" />
+      <el-form label-width="90px" label-position="left">
+        <el-form-item label="整改说明">
+          <el-input v-model="closeForm.remark" type="textarea" :rows="3" placeholder="说明整改措施落实情况、佐证材料位置与整改效果" />
+        </el-form-item>
+        <el-form-item label="佐证材料">
+          <el-upload drag action="#" :auto-upload="false" multiple :limit="5" v-model:file-list="closeFiles">
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">拖拽整改佐证材料到此处（照片 / 台账 / 检测报告）</div>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="完成确认">
+          <el-checkbox v-model="closeForm.confirmed">我已确认整改措施全部落实，数据真实、可追溯</el-checkbox>
+        </el-form-item>
+      </el-form>
+      <div class="close-note"><el-icon><InfoFilled /></el-icon>提交后进入省厅复核，闭环记录与佐证材料哈希将写入哈希链存证</div>
+      <template #footer>
+        <el-button @click="closeVisible = false">取消</el-button>
+        <el-button type="primary" :loading="closeLoading"
+          :disabled="closePct < 100 || !closeFiles.length || !closeForm.confirmed"
+          @click="submitClose">提交闭环并上报</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { InfoFilled, MagicStick, User, Calendar, Plus } from '@element-plus/icons-vue'
+import type { UploadUserFile } from 'element-plus'
+import { InfoFilled, MagicStick, User, Calendar, Plus, UploadFilled } from '@element-plus/icons-vue'
 
 /* ============================================================
  * 整改计划生成：正式环境调用后端 POST /api/v1/enterprise/rectify/generate
@@ -152,7 +191,21 @@ const items = ref<Issue[]>([
 ])
 const current = ref<Issue | null>(null)
 
-const plan = ref<PlanItem[]>([])
+const plans = ref<Record<string, PlanItem[]>>({})
+const currentPlan = computed(() => (current.value ? plans.value[current.value.no] ?? [] : []))
+
+function ensurePlan(issue: Issue) {
+  if (plans.value[issue.no]) return
+  plans.value[issue.no] = pickTemplate(issue.topic).map((p, i) => ({
+    ...p,
+    done: issue.status === '已闭环' || (issue.status === '整改中' && i === 0)
+  }))
+}
+function onSelect(row: Issue | null) {
+  current.value = row
+  if (row && row.status !== '待整改') ensurePlan(row)
+}
+
 const genVisible = ref(false)
 const genLoading = ref(false)
 const genStep = ref('正在分析事项…')
@@ -190,15 +243,21 @@ function pickTemplate(topic: string): PlanItem[] {
 const steps = ['正在分析事项…', '检索行业整改案例库…', '生成措施与责任分工…', '匹配预算基准价…', '整理完成']
 function openGenerate(row: Issue | null) {
   if (!row) return
-  current.value = row
+  if (row.status !== '待整改') {
+    ElMessage.info('仅「待整改」事项可生成计划，当前事项已进入整改或闭环阶段')
+    onSelect(row)
+    return
+  }
+  onSelect(row)
   genVisible.value = true
   genLoading.value = true
+  genStep.value = steps[0]
   let i = 0
   const timer = setInterval(() => {
     i++
     if (i >= steps.length) {
       clearInterval(timer)
-      plan.value = pickTemplate(row.topic).map(p => ({ ...p }))
+      plans.value[row.no] = pickTemplate(row.topic).map(p => ({ ...p }))
       genLoading.value = false
       setTimeout(() => { genVisible.value = false }, 900)
     } else {
@@ -207,8 +266,11 @@ function openGenerate(row: Issue | null) {
   }, 620)
 }
 function savePlan() {
-  if (current.value) current.value.status = '整改中'
-  ElMessage.success('整改计划已保存并指派责任人，进度同步至省厅监管端')
+  if (!current.value) return
+  if (!currentPlan.value.length) { ElMessage.warning('当前事项还没有整改计划'); return }
+  if (current.value.status === '已闭环') { ElMessage.info('事项已闭环，计划不可再修改'); return }
+  current.value.status = '整改中'
+  ElMessage.success('整改计划已保存并指派责任人，可逐项勾选完成情况后提交闭环')
 }
 
 /* ---------- 预算预估 ---------- */
@@ -243,10 +305,48 @@ function submitBudget() {
   }, 900)
 }
 
+/* ---------- 闭环确认 ---------- */
+const closeVisible = ref(false)
+const closeLoading = ref(false)
+const closeRow = ref<Issue | null>(null)
+const closeFiles = ref<UploadUserFile[]>([])
+const closeForm = reactive({ remark: '', confirmed: false })
+
+const closePct = computed(() => {
+  const list = closeRow.value ? plans.value[closeRow.value.no] ?? [] : []
+  return list.length ? Math.round((list.filter(p => p.done).length / list.length) * 100) : 0
+})
+
+function openClose(row: Issue) {
+  if (row.status !== '整改中') { ElMessage.info('仅「整改中」事项可提交闭环'); return }
+  onSelect(row)
+  ensurePlan(row)
+  closeRow.value = row
+  closeFiles.value = []
+  closeForm.remark = ''
+  closeForm.confirmed = false
+  closeVisible.value = true
+}
+
+function submitClose() {
+  if (!closeRow.value) return
+  if (closePct.value < 100) { ElMessage.warning('仍有整改措施未完成，请逐项确认后再提交'); return }
+  if (!closeFiles.value.length) { ElMessage.warning('请上传至少一份整改佐证材料'); return }
+  if (!closeForm.confirmed) { ElMessage.warning('请勾选完成确认'); return }
+  closeLoading.value = true
+  setTimeout(() => {
+    closeLoading.value = false
+    if (!closeRow.value) return
+    closeRow.value.status = '已闭环'
+    closeVisible.value = false
+    ElMessage.success(`事项 ${closeRow.value.no} 已闭环并上报省厅复核，佐证材料已哈希存证`)
+  }, 900)
+}
+
 /* ---------- 计划统计 ---------- */
-const totalDays = computed(() => plan.value.reduce((s, p) => s + parseInt(p.deadline || '0', 10) * (p.pri === '高' ? 1 : 0.3), 0).toFixed(0))
-const deptCount = computed(() => new Set(plan.value.map(p => p.dept)).size)
-const donePct = computed(() => (plan.value.length ? Math.round((plan.value.filter(p => p.done).length / plan.value.length) * 100) : 0))
+const totalDays = computed(() => currentPlan.value.reduce((s, p) => s + parseInt(p.deadline || '0', 10) * (p.pri === '高' ? 1 : 0.3), 0).toFixed(0))
+const deptCount = computed(() => new Set(currentPlan.value.map(p => p.dept)).size)
+const donePct = computed(() => (currentPlan.value.length ? Math.round((currentPlan.value.filter(p => p.done).length / currentPlan.value.length) * 100) : 0))
 </script>
 
 <style scoped lang="scss">
@@ -287,5 +387,11 @@ const donePct = computed(() => (plan.value.length ? Math.round((plan.value.filte
 @keyframes rot { to { transform: rotate(360deg); } }
 .gen-step { margin-top: 16px; font-size: 15px; font-weight: 700; color: var(--qn-text); }
 .gen-sub { margin-top: 8px; font-size: 12px; color: var(--qn-text-3); }
+.close-issue { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 12px; background: #f5f9fc; border: 1px solid #e3edf3; margin-bottom: 14px; }
+.ci-no { font-family: ui-monospace, Consolas, monospace; font-size: 12px; font-weight: 700; color: #4d6c89; }
+.ci-topic { font-size: 13.5px; color: var(--qn-text); line-height: 1.55; }
+.close-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; font-size: 13px; color: var(--qn-text-2);
+  b { min-width: 42px; text-align: right; font-size: 16px; color: #e6a23c; font-variant-numeric: tabular-nums; &.ok { color: var(--qn-primary); } } }
+.close-note { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--qn-text-3); }
 @media (max-width: 1150px) { .top-grid { grid-template-columns: 1fr; } }
 </style>
