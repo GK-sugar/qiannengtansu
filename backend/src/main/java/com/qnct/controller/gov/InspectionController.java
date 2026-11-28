@@ -1,32 +1,68 @@
 package com.qnct.controller.gov;
 
+import com.qnct.common.PageResult;
 import com.qnct.common.Result;
+import com.qnct.service.InspectionService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 /**
- * 省厅端 · 线下核查任务派发（与移动执法 H5 打卡联动）
+ * 省厅端 · 线下核查任务生命周期（与移动执法 H5 打卡联动）
+ *   PENDING → DOING → DONE；超期 → OVERDUE；PENDING/DOING → CANCELED
  */
 @RestController
 @RequestMapping("/api/v1/gov/inspection")
 public class InspectionController {
 
+    private final InspectionService inspection;
+
+    public InspectionController(InspectionService inspection) {
+        this.inspection = inspection;
+    }
+
     @GetMapping("/tasks")
-    public Result<List<Map<String, Object>>> tasks() {
-        return Result.ok(List.of(
-                Map.of("taskId", "T-2026-118", "org", "贵州黔能矿业", "inspector", "刘队", "type", "数据核查",
-                        "range", "1.5km", "status", "进行中", "deadline", "2026-12-02"),
-                Map.of("taskId", "T-2026-114", "org", "遵义铝业", "inspector", "王队", "type", "现场核查",
-                        "range", "2.0km", "status", "待打卡", "deadline", "2026-12-05"),
-                Map.of("taskId", "T-2026-109", "org", "贵州磷化", "inspector", "张队", "type", "复核检查",
-                        "range", "0.8km", "status", "已完成", "deadline", "2026-11-25")));
+    public Result<PageResult<Map<String, Object>>> tasks(@RequestParam(required = false) String status,
+                                                         @RequestParam(defaultValue = "1") long page,
+                                                         @RequestParam(defaultValue = "10") long size) {
+        return Result.ok(inspection.list(status, page, size));
+    }
+
+    @GetMapping("/{id}")
+    public Result<Map<String, Object>> detail(@PathVariable Long id) {
+        return Result.ok(inspection.detail(id));
     }
 
     @PostMapping("/dispatch")
     public Result<Map<String, Object>> dispatch(@RequestBody Map<String, Object> body) {
-        return Result.ok(Map.of("taskId", "T-2026-" + (System.currentTimeMillis() % 900 + 100),
-                "status", "DISPATCHED", "note", "已生成核查任务（短信通知可选，API-6）"));
+        return Result.ok(inspection.dispatch(body));
+    }
+
+    @PostMapping("/{id}/start")
+    public Result<Map<String, Object>> start(@PathVariable Long id) {
+        return Result.ok(inspection.start(id));
+    }
+
+    @PostMapping("/{id}/checkin")
+    public Result<Map<String, Object>> checkin(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        return Result.ok(inspection.checkin(id, body));
+    }
+
+    @PostMapping("/{id}/complete")
+    public Result<Map<String, Object>> complete(@PathVariable Long id,
+                                                @RequestBody(required = false) Map<String, Object> body) {
+        return Result.ok(inspection.complete(id, body == null ? Map.of() : body));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public Result<Map<String, Object>> cancel(@PathVariable Long id,
+                                              @RequestBody(required = false) Map<String, Object> body) {
+        String reason = body == null ? null : String.valueOf(body.getOrDefault("reason", ""));
+        return Result.ok(inspection.cancel(id, reason));
+    }
+
+    @PostMapping("/{id}/archive")
+    public Result<Map<String, Object>> archive(@PathVariable Long id) {
+        return Result.ok(inspection.archive(id));
     }
 }

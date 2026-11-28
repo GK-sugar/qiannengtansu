@@ -30,7 +30,7 @@ export const ROLE_MENUS: Record<RoleKey, MenuItem[]> = {
     { path: '/gov/review', title: '智能初审台', icon: 'Warning' },
     { path: '/gov/dispatch', title: '核查派单', icon: 'Position' },
     { path: '/gov/factors', title: '因子库管理', icon: 'Collection' },
-    { path: '/gov/seal', title: '电子签章', icon: 'Stamp' }
+    { path: '/gov/seal', title: '意见书回传', icon: 'Stamp' }
   ],
   agency: [
     { path: '/agency/dashboard', title: '数据包接收', icon: 'Box' },

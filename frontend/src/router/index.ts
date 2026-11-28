@@ -61,7 +61,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'review', name: 'GovReview', component: () => import('@/views/gov/review/index.vue'), meta: { title: '智能初审台' } },
       { path: 'dispatch', name: 'GovDispatch', component: () => import('@/views/gov/dispatch/index.vue'), meta: { title: '核查派单' } },
       { path: 'factors', name: 'GovFactors', component: () => import('@/views/gov/factors/index.vue'), meta: { title: '因子库管理' } },
-      { path: 'seal', name: 'GovSeal', component: () => import('@/views/gov/seal/index.vue'), meta: { title: '电子签章' } }
+      { path: 'seal', name: 'GovSeal', component: () => import('@/views/gov/seal/index.vue'), meta: { title: '意见书回传' } },
+      { path: 'city/:name', name: 'GovCityDetail', component: () => import('@/views/gov/city-detail/index.vue'), meta: { title: '市州碳排放详情' } }
     ]
   },
   // 态势大屏：独立全屏路由（无侧边栏）
@@ -105,6 +106,15 @@ const routes: RouteRecordRaw[] = [
       { path: 'audit-center', name: 'AdmAuditCenter', component: () => import('@/views/admin/audit-center/index.vue'), meta: { title: '全链路操作审计与可信存证中心' } },
       { path: 'dict', name: 'AdmDict', component: () => import('@/views/admin/dict/index.vue'), meta: { title: '数据字典与基础配置' } },
       { path: 'monitor', name: 'AdmMonitor', component: () => import('@/views/admin/monitor/index.vue'), meta: { title: '系统运行与接口监控' } }
+    ]
+  },
+  // ============ 个人信息（五端通用） ============
+  {
+    path: '/profile',
+    component: () => import('@/layout/MainLayout.vue'),
+    meta: { roles: ['enterprise', 'gov', 'agency', 'national', 'admin'], title: '个人信息' },
+    children: [
+      { path: '', name: 'Profile', component: () => import('@/views/profile/index.vue'), meta: { title: '个人信息' } }
     ]
   },
   { path: '/:pathMatch(.*)*', redirect: '/login' }

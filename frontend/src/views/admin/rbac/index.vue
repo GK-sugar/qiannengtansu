@@ -245,7 +245,7 @@ const menuTree = [
   { id: 'gov', label: '省厅监管端', level: 1, children: [
     { id: 'gov-screen', label: '态势大屏', level: 2 },
     { id: 'gov-review', label: '智能初审台', level: 2 },
-    { id: 'gov-seal', label: '电子签章', level: 2 }
+    { id: 'gov-seal', label: '意见书回传', level: 2 }
   ] },
   { id: 'agency', label: '核查机构端', level: 1, children: [
     { id: 'agency-review', label: '国际标准复核', level: 2 },

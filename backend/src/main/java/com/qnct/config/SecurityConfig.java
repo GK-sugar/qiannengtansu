@@ -45,8 +45,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_SUPER_ADMIN")
                 .requestMatchers("/api/v1/gov/**").hasAnyAuthority("ROLE_GOV", "ROLE_SUPER_ADMIN")
                 .requestMatchers("/api/v1/agency/**").hasAnyAuthority("ROLE_AGENCY", "ROLE_SUPER_ADMIN")
-                .requestMatchers("/api/v1/enterprise/**").hasAuthority("ROLE_ENTERPRISE")
-                .requestMatchers("/api/v1/national/**").hasAuthority("ROLE_NATIONAL")
+                // 企业端、国家级：admin（ROLE_SUPER_ADMIN）可以跨端访问做运维排查
+                .requestMatchers("/api/v1/enterprise/**").hasAnyAuthority("ROLE_ENTERPRISE", "ROLE_SUPER_ADMIN")
+                .requestMatchers("/api/v1/national/**").hasAnyAuthority("ROLE_NATIONAL", "ROLE_SUPER_ADMIN")
                 .anyRequest().authenticated())
             .exceptionHandling(eh -> eh
                 .authenticationEntryPoint((req, res, e) -> {

@@ -130,6 +130,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Download, Right, Clock, CircleCheck, InfoFilled, Warning, Refresh } from '@element-plus/icons-vue'
 import StatCard from '@/components/StatCard.vue'
+import { sha256Hex } from '@/utils/hash'
 
 const tab = ref('log')
 
@@ -142,7 +143,7 @@ const logs: AuditRow[] = [
   { time: '2026-11-26 10:42:18', operator: '系统管理员', module: '护照签发', action: '签发护照 QN-PP-2026-0041', before: '状态：待签发', after: '状态：已签发 / 哈希 +1', ip: '10.20.1.9', risk: '低', chgId: 'c4' },
   { time: '2026-11-26 10:15:07', operator: '李处长', module: '因子库', action: '更新电力因子 E-GRID-SC', before: '因子值 0.5810', after: '因子值 0.5703', ip: '10.10.3.21', risk: '中', chgId: 'c3' },
   { time: '2026-11-26 09:58:31', operator: '系统管理员', module: 'RBAC', action: '为用户 gov2 绑定角色', before: '角色：省厅审批员', after: '角色：省厅审批员, 因子库管理员', ip: '10.20.1.9', risk: '中', chgId: 'c2' },
-  { time: '2026-11-26 09:31:44', operator: '张副处', module: '初审', action: '通过企业核算初审', before: '状态：待初审', after: '状态：已通过 · 待签章', ip: '10.10.3.28', risk: '低', chgId: 'c1' },
+  { time: '2026-11-26 09:31:44', operator: '张副处', module: '初审', action: '通过企业核算初审', before: '状态：待初审', after: '状态：已通过 · 待回传', ip: '10.10.3.28', risk: '低', chgId: 'c1' },
   { time: '2026-11-26 09:12:02', operator: '王总', module: '核算', action: '修正 2026-10 用电量', before: '用电量 8,420,000 kWh', after: '用电量 8,619,500 kWh', ip: '223.104.19.6', risk: '高', chgId: 'c0' },
   { time: '2026-11-26 08:55:19', operator: '未知', module: '登录', action: '尝试以 admin 登录失败 3 次', before: '—', after: '账号锁定 15 分钟', ip: '185.220.101.37', risk: '高' },
   { time: '2026-11-26 08:40:52', operator: '陈主任', module: '护照签发', action: '复核护照 QN-PP-2026-0040（中伟新材料）', before: '状态：待复核', after: '状态：复核通过', ip: '10.10.3.12', risk: '低', chgId: 'c5' },
@@ -239,10 +240,6 @@ const resources = ref<Res[]>([
 const checking = ref(false)
 const lastCheck = ref('')
 
-async function sha256Hex(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
-  return Array.from(new Uint8Array(buf), x => x.toString(16).padStart(2, '0')).join('')
-}
 function shortHash(h: string) { return h ? '0x' + h.slice(0, 18) + '…' + h.slice(-10) : '…' }
 
 async function checkOne(row: Res) {

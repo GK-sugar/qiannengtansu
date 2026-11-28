@@ -107,24 +107,82 @@ html, body, #app {
   position: relative;
   overflow: hidden;
   border-radius: 16px;
-  padding: 28px 32px;
+  padding: 26px 32px;
   color: #fff;
-  background: linear-gradient(120deg, #062b3a 0%, #075e54 45%, #00695c 100%);
-  box-shadow: 0 12px 40px rgba(0, 107, 84, 0.25);
+  background:
+    radial-gradient(560px 240px at 86% -35%, rgba(0, 209, 255, 0.3), transparent 62%),
+    radial-gradient(420px 220px at 2% 120%, rgba(0, 181, 129, 0.32), transparent 58%),
+    linear-gradient(118deg, #04222c 0%, #06483e 46%, #05604e 100%);
+  box-shadow: 0 14px 44px rgba(4, 54, 42, 0.28);
 }
+/* 底层网格：向右下缓慢漂移，径向遮罩让边缘自然淡出 */
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 75% 130% at 74% -10%, #000 12%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 130% at 74% -10%, #000 12%, transparent 78%);
+  animation: hero-grid-drift 30s linear infinite;
+  pointer-events: none;
+}
+@keyframes hero-grid-drift {
+  to { background-position: 46px 46px; }
+}
+/* 右上光环：细描边 + 内辉光，缓慢浮动 */
 .hero-banner::after {
   content: '';
   position: absolute;
-  right: -80px;
-  top: -120px;
-  width: 340px;
-  height: 340px;
+  right: -36px;
+  top: -104px;
+  width: 300px;
+  height: 300px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 209, 255, 0.35) 0%, transparent 70%);
+  border: 1px solid rgba(126, 240, 194, 0.32);
+  box-shadow:
+    inset 0 0 90px rgba(0, 209, 255, 0.14),
+    0 0 0 30px rgba(126, 240, 194, 0.045),
+    0 0 0 62px rgba(0, 209, 255, 0.03);
+  animation: hero-halo 9s ease-in-out infinite;
   pointer-events: none;
 }
+@keyframes hero-halo {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.9; }
+  50% { transform: translateY(-12px) scale(1.03); opacity: 1; }
+}
+.hero-banner > * { position: relative; z-index: 1; }
 .hero-banner .title { font-size: 24px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px; }
 .hero-banner .sub { font-size: 13px; opacity: 0.85; }
+/* 给右上时钟留出安全区，避免长副标题压到时钟下方 */
+.hero-banner .title,
+.hero-banner .sub { max-width: calc(100% - 300px); }
+@media (max-width: 1180px) {
+  .hero-banner .title,
+  .hero-banner .sub { max-width: none; }
+}
+@media (max-width: 768px) {
+  .hero-banner { padding: 22px 20px; }
+  .hero-banner .title { font-size: 20px; }
+}
+
+/* 横幅内按钮：深底上的两种安全配色 */
+.hero-banner .el-button.hero-solid {
+  background: #fff;
+  border-color: #fff;
+  color: var(--qn-primary-dark);
+  font-weight: 700;
+  &:hover, &:focus { background: #e6f9f2; border-color: #e6f9f2; color: var(--qn-primary-dark); }
+}
+.hero-banner .el-button.hero-ghost {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+  backdrop-filter: blur(4px);
+  &:hover, &:focus { background: rgba(255, 255, 255, 0.24); border-color: #fff; color: #fff; }
+}
 
 /* ---------- 渐变文字 ---------- */
 .grad-text {
@@ -148,4 +206,17 @@ html, body, #app {
   border: 1px solid rgba(0, 209, 255, 0.18);
   border-radius: 10px;
   backdrop-filter: blur(6px);
+}
+/* ---------- 弹窗自适应：固定宽度不得超出视口 ---------- */
+.el-dialog {
+  max-width: calc(100vw - 28px);
+}
+@media (max-width: 768px) {
+  .el-dialog { max-width: calc(100vw - 20px); }
+  .el-dialog__body { overflow-x: auto; }
+}
+
+/* 弹层（Popover/Dropdown）同样不超出视口 */
+.el-popover.el-popper {
+  max-width: calc(100vw - 24px);
 }

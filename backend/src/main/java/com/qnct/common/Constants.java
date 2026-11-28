@@ -36,7 +36,7 @@ public final class Constants {
 
     /** 哈希链业务类型 */
     public static final List<String> HASH_BIZ_TYPES =
-            List.of("CARBON_RESULT", "CARBON_REPORT", "FACTOR", "PASSPORT", "PACKAGE");
+            List.of("CARBON_RESULT", "CARBON_REPORT", "FACTOR", "PASSPORT", "PACKAGE", "RECTIFY");
 
     /** 波动预警默认阈值（F6） */
     public static final double DEFAULT_FLUCTUATION_THRESHOLD = 0.20;

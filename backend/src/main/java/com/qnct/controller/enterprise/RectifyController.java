@@ -3,12 +3,15 @@ package com.qnct.controller.enterprise;
 import com.qnct.common.Result;
 import com.qnct.dto.RectifyGenerateRequest;
 import com.qnct.entity.EntRectifyIssue;
+import com.qnct.event.BizNotificationEvent;
 import com.qnct.mapper.EntRectifyIssueMapper;
+import com.qnct.security.SecurityUtils;
 import com.qnct.service.HashChainService;
 import com.qnct.service.LlmGateway;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -34,13 +37,16 @@ public class RectifyController {
     private final HashChainService hashChain;
     private final EntRectifyIssueMapper issueMapper;
     private final ObjectMapper objectMapper;
+    private final ApplicationEventPublisher events;
 
     public RectifyController(LlmGateway llm, HashChainService hashChain,
-                             EntRectifyIssueMapper issueMapper, ObjectMapper objectMapper) {
+                             EntRectifyIssueMapper issueMapper, ObjectMapper objectMapper,
+                             ApplicationEventPublisher events) {
         this.llm = llm;
         this.hashChain = hashChain;
         this.issueMapper = issueMapper;
         this.objectMapper = objectMapper;
+        this.events = events;
     }
 
     @GetMapping("/issues")
@@ -48,6 +54,7 @@ public class RectifyController {
         try {
             var rows = issueMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<EntRectifyIssue>()
+                        .eq(EntRectifyIssue::getOrgId, SecurityUtils.orgId(1001L))
                         .orderByDesc(EntRectifyIssue::getCreateTime));
             if (rows.isEmpty()) {
                 return Result.ok(demoIssues());
@@ -111,12 +118,15 @@ public class RectifyController {
     @PostMapping("/submit")
     public Result<Map<String, Object>> submit(@RequestBody Map<String, Object> body) {
         String issueNo = String.valueOf(body.getOrDefault("issueNo", "ZG-2026-041"));
+        Long orgId = SecurityUtils.orgId(1001L);
+        Long operatorId = SecurityUtils.userId(4L);
+        Long issueId = null;
         try {
             String planJson = objectMapper.writeValueAsString(body.get("plan"));
             String budgetJson = objectMapper.writeValueAsString(body.get("budget"));
             EntRectifyIssue issue = new EntRectifyIssue();
             issue.setIssueNo(issueNo);
-            issue.setOrgId(1001L);
+            issue.setOrgId(orgId);
             issue.setSourceType(String.valueOf(body.getOrDefault("source", "波动预警")));
             issue.setTopic(String.valueOf(body.getOrDefault("topic", "")));
             issue.setRiskLevel(String.valueOf(body.getOrDefault("risk", "中")));
@@ -126,15 +136,20 @@ public class RectifyController {
             issue.setCreateTime(LocalDateTime.now());
             issue.setUpdateTime(LocalDateTime.now());
             issueMapper.insert(issue);
+            issueId = issue.getId();
         } catch (Exception e) {
             // 落库失败仅演示
         }
         Map<String, Object> snap = new LinkedHashMap<>();
         snap.put("issueNo", issueNo);
+        snap.put("orgId", orgId);
         snap.put("plan", body.get("plan"));
         snap.put("budget", body.get("budget"));
         snap.put("status", "整改中");
-        var block = hashChain.append("RECTIFY", 202611001L, issueNo, snap, 4L);
+        var block = hashChain.append("RECTIFY", issueId == null ? 202611001L : issueId, issueNo, snap, operatorId);
+        events.publishEvent(new BizNotificationEvent("RECTIFY", null, 1L,
+                "企业提交整改计划", "企业 " + orgId + " 提交了整改事项 " + issueNo
+                        + " 的措施与预算，已上链存证（区块 #" + block.getBlockSeq() + "），待审核。"));
         return Result.ok(Map.of("submitted", true, "blockSeq", block.getBlockSeq(), "hash", block.getDataHash()));
     }
 }

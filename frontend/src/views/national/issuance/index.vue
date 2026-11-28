@@ -109,7 +109,7 @@
         </div>
         <div class="pp-right">
           <div class="qr-wrap">
-            <qrcode-vue :value="verifyUrl" :size="180" level="M" class="qr-svg" />
+            <qrcode-vue :value="verifyUrl" :size="180" level="M" render-as="svg" :margin="1" class="qr-svg" />
             <div class="qr-tip">扫码验真 · 防伪令牌 {{ shortToken }}</div>
           </div>
           <div class="pp-meta">
@@ -129,10 +129,11 @@
     <!-- ============ 扫码验真弹窗 ============ -->
     <el-dialog v-model="verifyVisible" title="扫码验真 · 公开验真页" width="440px">
       <div class="verify-box" v-if="verifyToken">
-        <qrcode-vue :value="verifyUrlFor" :size="190" level="M" class="qr-svg" />
+        <qrcode-vue :value="verifyUrlFor" :size="190" level="M" render-as="svg" :margin="1" class="qr-svg" />
         <div class="verify-line">防伪令牌：<b class="mono">{{ verifyToken }}</b></div>
         <div class="verify-line dim">验真地址：{{ verifyUrlFor }}</div>
         <div class="verify-note">使用微信 / 浏览器扫码即可打开公开验真页，核验护照哈希与签发记录；任何篡改将在验真页标红告警</div>
+        <div v-if="isLocalOrigin" class="verify-note lan-tip">手机需与电脑连接同一 Wi-Fi；若扫码打不开，请在「企业端 · 护照申请」页设置局域网地址</div>
       </div>
       <template #footer>
         <el-button @click="verifyVisible = false">关闭</el-button>
@@ -148,6 +149,7 @@ import { ElMessage } from 'element-plus'
 import QrcodeVue from 'qrcode.vue'
 import request from '@/utils/request'
 import StatCard from '@/components/StatCard.vue'
+import { isLocalOrigin, publicOrigin } from '@/utils/publicUrl'
 
 interface Row { applicationNo: string; entName: string; period: string; productName: string; totalCo2e: string; intensity: string; agencyConclusion: string; status?: string; passportNo?: string; chainSeq?: number; verifyToken?: string; hashValue?: string; issueTime?: string }
 
@@ -167,7 +169,9 @@ const ppVisible = ref(false)
 const ppNonce = ref(0)
 const pp = reactive<any>({ passportNo: '', verifyToken: '', chainSeq: 0, hashValue: '', entName: '', productName: '' })
 
-const verifyUrl = computed(() => `${location.origin}/verify/${pp.verifyToken}`)
+const publicBase = ref(location.origin)
+onMounted(async () => { publicBase.value = await publicOrigin() })
+const verifyUrl = computed(() => `${publicBase.value}/verify/${pp.verifyToken}`)
 const shortToken = computed(() => (pp.verifyToken || '').slice(0, 12))
 
 const demoPending: Row[] = [
@@ -281,9 +285,9 @@ function openVerify(token?: string) {
 
 const verifyVisible = ref(false)
 const verifyToken = ref('')
-const verifyUrlFor = computed(() => `${location.origin}/verify/${verifyToken.value}`)
+const verifyUrlFor = computed(() => `${publicBase.value}/verify/${verifyToken.value}`)
 function goPublicVerify() {
-  window.open('/verify/' + verifyToken.value, '_blank')
+  window.open(verifyUrlFor.value, '_blank')
   verifyVisible.value = false
 }
 </script>
@@ -331,10 +335,18 @@ function goPublicVerify() {
   .pm-row { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #e3ebf2;
     b { color: var(--qn-text); text-align: right; } .mono { font-size: 11px; } } }
 .pp-seal { width: 106px; height: 106px; position: absolute; right: 22px; bottom: 18px; opacity: 0.9; transform: rotate(-8deg); }
+@media (max-width: 700px) {
+  .passport { grid-template-columns: 1fr; min-height: 0; }
+  .pp-left, .pp-right { padding: 22px 18px; }
+  .pp-right { align-items: flex-start; }
+  .pp-title { font-size: 24px; letter-spacing: 4px; }
+  .pp-seal { position: static; align-self: flex-end; margin-top: 6px; }
+}
 
 /* ---------- 扫码验真 ---------- */
 .verify-box { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 8px 0 4px; text-align: center;
   .qr-svg { border-radius: 10px; box-shadow: 0 8px 22px rgba(8, 34, 60, 0.14); background: #fff; padding: 6px; } }
 .verify-line { font-size: 12.5px; color: var(--qn-text); &.dim { color: var(--qn-text-3); font-size: 11.5px; word-break: break-all; } }
 .verify-note { margin-top: 4px; font-size: 11.5px; color: var(--qn-text-3); line-height: 1.7; }
+.lan-tip { color: #64748b; padding-top: 4px; border-top: 1px dashed var(--qn-border); }
 </style>
